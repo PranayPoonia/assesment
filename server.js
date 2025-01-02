@@ -1,92 +1,83 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const mysql = require('mysql2');
-const cors = require('cors');
 const bodyParser = require('body-parser');
+const { Pool } = require('pg'); // PostgreSQL client
 
-// Initialize Express app
 const app = express();
-const port = 3000;
-
-// Enable CORS and parse JSON body
-app.use(cors());
 app.use(bodyParser.json());
 
-// MySQL database connection
-const db = mysql.createConnection({
+// Set up PostgreSQL client
+const pool = new Pool({
+  user: 'your-username',
   host: 'localhost',
-  user: 'root',
-  password: 'yourpassword',
-  database: 'mentorship_platform'
+  database: 'mentorship',
+  password: 'your-password',
+  port: 5432,
 });
 
-// Connect to the MySQL database
-db.connect((err) => {
-  if (err) throw err;
-  console.log('Connected to the database');
+// Registration Route
+app.post('/register', async (req, res) => {
+  const { username, password, role } = req.body;
+
+  try {
+    const result = await pool.query(
+      'INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING *',
+      [username, password, role]
+    );
+    res.json({ message: 'Registration successful', user: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: 'Error registering user' });
+  }
 });
 
-// Register Endpoint
-app.post('/register', (req, res) => {
+// Login Route
+app.post('/login', async (req, res) => {
   const { username, password } = req.body;
-  bcrypt.hash(password, 10, (err, hashedPassword) => {
-    if (err) return res.status(500).json({ error: err.message });
-    const query = 'INSERT INTO users (username, password) VALUES (?, ?)';
-    db.query(query, [username, hashedPassword], (err, result) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res.status(201).json({ message: 'User registered successfully!' });
-    });
-  });
+
+  try {
+    const result = await pool.query(
+      'SELECT * FROM users WHERE username = $1 AND password = $2',
+      [username, password]
+    );
+    if (result.rows.length > 0) {
+      res.json({ message: 'Login successful', user: result.rows[0] });
+    } else {
+      res.status(400).json({ error: 'Invalid credentials' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Error logging in' });
+  }
 });
 
-// Login Endpoint
-app.post('/login', (req, res) => {
-  const { username, password } = req.body;
-  const query = 'SELECT * FROM users WHERE username = ?';
-  db.query(query, [username], (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (results.length === 0) return res.status(404).json({ message: 'User not found' });
+// Profile Route (Create or Update)
+app.post('/profile', async (req, res) => {
+  const { user_id, skills, interests, bio } = req.body;
 
-    bcrypt.compare(password, results[0].password, (err, isMatch) => {
-      if (err || !isMatch) return res.status(401).json({ message: 'Invalid credentials' });
-      const token = jwt.sign({ userId: results[0].id }, 'secretkey', { expiresIn: '1h' });
-      res.status(200).json({ token });
-    });
-  });
+  try {
+    const result = await pool.query(
+      'INSERT INTO profiles (user_id, skills, interests, bio) VALUES ($1, $2, $3, $4) RETURNING *',
+      [user_id, skills, interests, bio]
+    );
+    res.json({ message: 'Profile created successfully', profile: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: 'Error creating profile' });
+  }
 });
 
-// Profile Update Endpoint
-app.put('/profile', (req, res) => {
-  const { userId, role, skills, interests, bio } = req.body;
-  const query = 'UPDATE profiles SET role = ?, skills = ?, interests = ?, bio = ? WHERE user_id = ?';
-  db.query(query, [role, skills, interests, bio, userId], (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.status(200).json({ message: 'Profile updated successfully!' });
-  });
+// Mentorship Request Route (Send Request)
+app.post('/mentorship', async (req, res) => {
+  const { mentor_id, mentee_id } = req.body;
+
+  try {
+    const result = await pool.query(
+      'INSERT INTO mentorship_requests (mentor_id, mentee_id, status) VALUES ($1, $2, $3) RETURNING *',
+      [mentor_id, mentee_id, 'pending']
+    );
+    res.json({ message: 'Mentorship request sent', request: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: 'Error sending mentorship request' });
+  }
 });
 
-// Send Mentorship Request Endpoint
-app.post('/request-mentor', (req, res) => {
-  const { mentorId, menteeId } = req.body;
-  const query = 'INSERT INTO mentorship_requests (mentor_id, mentee_id) VALUES (?, ?)';
-  db.query(query, [mentorId, menteeId], (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.status(201).json({ message: 'Mentorship request sent successfully!' });
-  });
-});
-
-// Accept or Decline Mentorship Request
-app.put('/update-request', (req, res) => {
-  const { requestId, status } = req.body;
-  const query = 'UPDATE mentorship_requests SET status = ? WHERE id = ?';
-  db.query(query, [status, requestId], (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.status(200).json({ message: 'Request updated successfully!' });
-  });
-});
-
-// Start server
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+app.listen(3000, () => {
+  console.log('Server is running on port 3000');
 });
