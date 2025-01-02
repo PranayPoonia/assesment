@@ -7,38 +7,43 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header>
-    <nav>
-      <a href="#">Home</a>
-      <a href="#">Login</a>
-      <a href="#">Register</a>
-      <a href="#">Profile</a>
-    </nav>
-  </header>
-
-  <main>
-    <section id="login-section">
+  <div class="container">
+    <!-- Login Section -->
+    <div id="login">
       <h2>Login</h2>
-      <form id="login-form">
-        <label for="username">Username</label>
-        <input type="text" id="username" placeholder="Enter username" required>
-        <label for="password">Password</label>
-        <input type="password" id="password" placeholder="Enter password" required>
+      <form id="loginForm">
+        <label for="username">Username:</label>
+        <input type="text" id="username" required>
+        
+        <label for="password">Password:</label>
+        <input type="password" id="password" required>
+        
         <button type="submit">Login</button>
       </form>
-    </section>
+      <p>Don't have an account? <span id="registerLink" class="link">Register here</span></p>
+    </div>
 
-    <section id="register-section">
+    <!-- Register Section -->
+    <div id="register" class="hidden">
       <h2>Register</h2>
-      <form id="register-form">
-        <label for="register-username">Username</label>
-        <input type="text" id="register-username" placeholder="Enter username" required>
-        <label for="register-password">Password</label>
-        <input type="password" id="register-password" placeholder="Enter password" required>
+      <form id="registerForm">
+        <label for="newUsername">Username:</label>
+        <input type="text" id="newUsername" required>
+        
+        <label for="newPassword">Password:</label>
+        <input type="password" id="newPassword" required>
+        
+        <label for="role">Role:</label>
+        <select id="role" required>
+          <option value="mentor">Mentor</option>
+          <option value="mentee">Mentee</option>
+        </select>
+        
         <button type="submit">Register</button>
       </form>
-    </section>
-  </main>
+      <p>Already have an account? <span id="loginLink" class="link">Login here</span></p>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>
